@@ -33,5 +33,9 @@ Thumbs.db
 # TypeScript
 *.tsbuildinfo
 
+# Local notes
+Problems_avoid.txt
+*.txt
+
 # Expo
 web-build/
