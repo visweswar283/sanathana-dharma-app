@@ -5,6 +5,8 @@ import { errorHandler } from './middleware/errorHandler';
 import { globalRateLimit } from './middleware/rateLimit';
 import healthRouter from './routes/health';
 import deitiesRouter from './routes/deities';
+import chatRouter from './routes/chat';
+import conversationsRouter from './routes/conversations';
 import { logger } from './utils/logger';
 
 const app = express();
@@ -17,6 +19,8 @@ app.use(globalRateLimit);
 // Routes
 app.use('/api/health', healthRouter);
 app.use('/api/deities', deitiesRouter);
+app.use('/api/chat', chatRouter);
+app.use('/api/conversations', conversationsRouter);
 
 // 404
 app.use((_req, res) => {
