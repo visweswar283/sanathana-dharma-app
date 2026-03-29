@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "Sanathana Dharma",
+    "slug": "sanathana-dharma",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "sanathana",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1A0A00"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.sanathana.dharma"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#1A0A00"
+      },
+      "package": "com.sanathana.dharma"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font"
+    ]
+  }
+}
