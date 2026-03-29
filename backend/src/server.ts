@@ -7,6 +7,7 @@ import healthRouter from './routes/health';
 import deitiesRouter from './routes/deities';
 import chatRouter from './routes/chat';
 import conversationsRouter from './routes/conversations';
+import authRouter from './routes/auth';
 import { logger } from './utils/logger';
 
 const app = express();
@@ -18,6 +19,7 @@ app.use(globalRateLimit);
 
 // Routes
 app.use('/api/health', healthRouter);
+app.use('/api/auth', authRouter);
 app.use('/api/deities', deitiesRouter);
 app.use('/api/chat', chatRouter);
 app.use('/api/conversations', conversationsRouter);
