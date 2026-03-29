@@ -4,6 +4,7 @@ import { env } from './config/environment';
 import { errorHandler } from './middleware/errorHandler';
 import { globalRateLimit } from './middleware/rateLimit';
 import healthRouter from './routes/health';
+import deitiesRouter from './routes/deities';
 import { logger } from './utils/logger';
 
 const app = express();
@@ -15,6 +16,7 @@ app.use(globalRateLimit);
 
 // Routes
 app.use('/api/health', healthRouter);
+app.use('/api/deities', deitiesRouter);
 
 // 404
 app.use((_req, res) => {
