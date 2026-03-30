@@ -28,7 +28,8 @@ export const useUserStore = create<UserState>((set) => ({
       await AsyncStorage.setItem('auth_token', token);
       set({ token, user, isLoading: false });
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Login failed';
+      const axiosMsg = (err as any)?.response?.data?.error?.message;
+      const message = axiosMsg ?? (err instanceof Error ? err.message : 'Login failed. Please check your email and password.');
       set({ error: message, isLoading: false });
       throw err;
     }
@@ -41,7 +42,8 @@ export const useUserStore = create<UserState>((set) => ({
       await AsyncStorage.setItem('auth_token', token);
       set({ token, user, isLoading: false });
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Registration failed';
+      const axiosMsg = (err as any)?.response?.data?.error?.message;
+      const message = axiosMsg ?? (err instanceof Error ? err.message : 'Registration failed. Please try again.');
       set({ error: message, isLoading: false });
       throw err;
     }
