@@ -34,6 +34,10 @@ app.use(errorHandler);
 
 app.listen(env.PORT, () => {
   logger.info(`Sanathana Dharma API running on port ${env.PORT} [${env.NODE_ENV}]`);
+  if (!env.ANTHROPIC_API_KEY || env.MOCK_MODE) {
+    logger.warn('MOCK MODE active — Claude API is disabled. Pre-written Hanuma responses will be used.');
+    logger.warn('To use real AI: set ANTHROPIC_API_KEY in backend/.env');
+  }
 });
 
 export default app;

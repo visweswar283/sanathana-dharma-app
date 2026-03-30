@@ -4,6 +4,8 @@ import { conversationStore } from '../conversation/ConversationStore';
 import { anthropic, CLAUDE_MODEL } from '../../config/anthropic';
 import { DeityNotFoundError, DeityUnavailableError } from '../../utils/errors';
 import { logger } from '../../utils/logger';
+import { env } from '../../config/environment';
+import { getMockResponse } from './MockResponses';
 
 export interface StreamChunk {
   type: 'chunk';
@@ -60,41 +62,52 @@ export class ChatService {
     let cachedTokens = 0;
     let totalTokens = 0;
 
-    try {
-      const stream = anthropic.messages.stream({
-        model: CLAUDE_MODEL,
-        max_tokens: 1024,
-        system: systemBlocks as Parameters<typeof anthropic.messages.stream>[0]['system'],
-        messages: [
-          ...history,
-          { role: 'user', content: transformedMessage },
-        ],
-      });
+    const isMockMode = !env.ANTHROPIC_API_KEY || env.MOCK_MODE;
 
-      for await (const event of stream) {
-        if (
-          event.type === 'content_block_delta' &&
-          event.delta.type === 'text_delta'
-        ) {
-          fullResponse += event.delta.text;
-          yield { type: 'chunk', content: event.delta.text };
+    if (isMockMode) {
+      // Stream a pre-written response word-by-word so the UI feels real
+      fullResponse = getMockResponse(emotionalState);
+      const words = fullResponse.split(' ');
+      for (const word of words) {
+        yield { type: 'chunk', content: word + ' ' };
+        await new Promise((r) => setTimeout(r, 40));
+      }
+    } else {
+      try {
+        const stream = anthropic.messages.stream({
+          model: CLAUDE_MODEL,
+          max_tokens: 1024,
+          system: systemBlocks as Parameters<typeof anthropic.messages.stream>[0]['system'],
+          messages: [
+            ...history,
+            { role: 'user', content: transformedMessage },
+          ],
+        });
+
+        for await (const event of stream) {
+          if (
+            event.type === 'content_block_delta' &&
+            event.delta.type === 'text_delta'
+          ) {
+            fullResponse += event.delta.text;
+            yield { type: 'chunk', content: event.delta.text };
+          }
         }
-      }
 
-      const finalMessage = await stream.finalMessage();
-      cachedTokens = (finalMessage.usage as unknown as Record<string, number>)['cache_read_input_tokens'] ?? 0;
-      totalTokens =
-        finalMessage.usage.input_tokens + finalMessage.usage.output_tokens;
+        const finalMessage = await stream.finalMessage();
+        cachedTokens = (finalMessage.usage as unknown as Record<string, number>)['cache_read_input_tokens'] ?? 0;
+        totalTokens = finalMessage.usage.input_tokens + finalMessage.usage.output_tokens;
 
-      if (cachedTokens > 0) {
-        logger.debug(
-          `Cache hit: ${cachedTokens} tokens served from cache (saved ~${Math.round((cachedTokens / totalTokens) * 100)}% input cost)`
-        );
+        if (cachedTokens > 0) {
+          logger.debug(
+            `Cache hit: ${cachedTokens} tokens served from cache (saved ~${Math.round((cachedTokens / totalTokens) * 100)}% input cost)`
+          );
+        }
+      } catch (err) {
+        logger.error('Claude API error', err);
+        yield { type: 'error', message: 'The divine connection was interrupted. Please try again.' };
+        return;
       }
-    } catch (err) {
-      logger.error('Claude API error', err);
-      yield { type: 'error', message: 'The divine connection was interrupted. Please try again.' };
-      return;
     }
 
     // Persist both messages
