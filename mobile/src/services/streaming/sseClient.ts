@@ -27,72 +27,72 @@ interface ChatPayload {
 }
 
 /**
- * Streams a deity response from the backend via SSE (Server-Sent Events).
- * Uses fetch + ReadableStream because React Native does not support the
- * browser EventSource API natively.
- *
- * Calls onEvent for each parsed SSE event until 'done' or 'error'.
+ * Streams a deity response using XMLHttpRequest.onprogress —
+ * React Native does not support fetch ReadableStream, but XHR
+ * progressive loading works correctly on both iOS and Android.
  */
-export async function streamChatResponse(
+export function streamChatResponse(
   deityId: string,
   payload: ChatPayload,
   onEvent: (event: SSEEvent) => void,
   signal?: AbortSignal
 ): Promise<void> {
-  const token = await AsyncStorage.getItem('auth_token');
+  return new Promise(async (resolve) => {
+    const token = await AsyncStorage.getItem('auth_token');
+    const xhr = new XMLHttpRequest();
+    let cursor = 0;
 
-  const response = await fetch(`${BASE_URL}/chat/${deityId}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token ?? ''}`,
-      Accept: 'text/event-stream',
-    },
-    body: JSON.stringify(payload),
-    signal,
+    // Respect AbortSignal
+    signal?.addEventListener('abort', () => {
+      xhr.abort();
+      resolve();
+    });
+
+    xhr.open('POST', `${BASE_URL}/chat/${deityId}`);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader('Authorization', `Bearer ${token ?? ''}`);
+    xhr.setRequestHeader('Accept', 'text/event-stream');
+
+    // Called repeatedly as new data arrives
+    xhr.onprogress = () => {
+      const newText = xhr.responseText.slice(cursor);
+      cursor = xhr.responseText.length;
+      parseSSELines(newText, onEvent);
+    };
+
+    xhr.onload = () => {
+      // Parse any remaining buffered data
+      const remaining = xhr.responseText.slice(cursor);
+      if (remaining) parseSSELines(remaining, onEvent);
+      resolve();
+    };
+
+    xhr.onerror = () => {
+      onEvent({ type: 'error', message: 'Network error — check your connection.' });
+      resolve();
+    };
+
+    xhr.ontimeout = () => {
+      onEvent({ type: 'error', message: 'Request timed out. Please try again.' });
+      resolve();
+    };
+
+    xhr.timeout = 60000;
+    xhr.send(JSON.stringify(payload));
   });
+}
 
-  if (!response.ok) {
-    const errorText = await response.text();
+function parseSSELines(text: string, onEvent: (event: SSEEvent) => void): void {
+  // SSE format: "data: {...}\n\n"
+  const lines = text.split('\n');
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith('data: ')) continue;
     try {
-      const parsed = JSON.parse(errorText);
-      onEvent({ type: 'error', message: parsed?.error?.message ?? 'Request failed' });
+      const event = JSON.parse(trimmed.slice(6)) as SSEEvent;
+      onEvent(event);
     } catch {
-      onEvent({ type: 'error', message: `Request failed (${response.status})` });
-    }
-    return;
-  }
-
-  if (!response.body) {
-    onEvent({ type: 'error', message: 'No response stream received' });
-    return;
-  }
-
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-
-    // SSE format: "data: {...}\n\n"
-    const parts = buffer.split('\n\n');
-    buffer = parts.pop() ?? '';
-
-    for (const part of parts) {
-      const line = part.trim();
-      if (!line.startsWith('data: ')) continue;
-
-      try {
-        const event = JSON.parse(line.slice(6)) as SSEEvent;
-        onEvent(event);
-        if (event.type === 'done' || event.type === 'error') return;
-      } catch {
-        // Malformed SSE line — skip
-      }
+      // Incomplete or malformed line — skip
     }
   }
 }
