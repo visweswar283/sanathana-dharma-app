@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { v4 as uuidv4 } from 'uuid';
+import { generateId } from '../utils/id';
 import type { ChatMessage, EmotionalState } from '../types/chat';
 import { streamChatResponse } from '../services/streaming/sseClient';
 
@@ -27,14 +27,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     // Add user message immediately
     const userMsg: ChatMessage = {
-      id: uuidv4(),
+      id: generateId(),
       role: 'user',
       content: text,
       timestamp: new Date(),
     };
 
     // Placeholder for streaming deity response
-    const deityMsgId = uuidv4();
+    const deityMsgId = generateId();
     const deityMsg: ChatMessage = {
       id: deityMsgId,
       role: 'deity',
