@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // DEV  → your Mac's local IP (phone must be on same Wi-Fi)
 // PROD → Railway deployment URL (set after deploying to Railway)
 const DEV_URL = 'http://10.0.0.180:3000/api';
-const PROD_URL = 'https://your-app.railway.app/api'; // ← update after Railway deploy
+const PROD_URL = 'https://sanathana-dharma-app-production.up.railway.app/api';
 
 const BASE_URL = __DEV__ ? DEV_URL : PROD_URL;
 
