@@ -13,8 +13,9 @@ import { logger } from './utils/logger';
 
 const app = express();
 
-// Core middleware
-app.use(cors({ origin: env.ALLOWED_ORIGINS, credentials: true }));
+// Core middleware — in production accept any origin (Expo Go + future native app)
+const corsOrigin = env.NODE_ENV === 'production' ? true : env.ALLOWED_ORIGINS;
+app.use(cors({ origin: corsOrigin, credentials: true }));
 app.use(express.json({ limit: '10kb' }));
 app.use(globalRateLimit);
 
@@ -38,7 +39,10 @@ app.listen(env.PORT, () => {
   logger.info(`Sanathana Dharma API running on port ${env.PORT} [${env.NODE_ENV}]`);
   if (!env.ANTHROPIC_API_KEY || env.MOCK_MODE) {
     logger.warn('MOCK MODE active — Claude API is disabled. Pre-written Hanuma responses will be used.');
-    logger.warn('To use real AI: set ANTHROPIC_API_KEY in backend/.env');
+    logger.warn('To use real AI: set ANTHROPIC_API_KEY in environment variables');
+  }
+  if (!env.ELEVENLABS_API_KEY) {
+    logger.warn('ELEVENLABS_API_KEY not set — voice mode disabled');
   }
 });
 
