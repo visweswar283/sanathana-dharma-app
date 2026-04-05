@@ -4,10 +4,11 @@ import { env } from './config/environment';
 import { errorHandler } from './middleware/errorHandler';
 import { globalRateLimit } from './middleware/rateLimit';
 import healthRouter from './routes/health';
+import authRouter from './routes/auth';
 import deitiesRouter from './routes/deities';
 import chatRouter from './routes/chat';
 import conversationsRouter from './routes/conversations';
-import authRouter from './routes/auth';
+import ttsRouter from './routes/tts';
 import { logger } from './utils/logger';
 
 const app = express();
@@ -23,6 +24,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/deities', deitiesRouter);
 app.use('/api/chat', chatRouter);
 app.use('/api/conversations', conversationsRouter);
+app.use('/api/tts', ttsRouter);
 
 // 404
 app.use((_req, res) => {
