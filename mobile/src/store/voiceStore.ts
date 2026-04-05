@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { Audio } from 'expo-av';
+import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
+import type { AudioPlayer } from 'expo-audio';
 import * as FileSystem from 'expo-file-system/legacy';
 import { fetchTTSStatus, synthesizeText } from '../services/api/ttsApi';
 
@@ -8,12 +9,12 @@ interface VoiceState {
   isTTSAvailable: boolean;   // server has ElevenLabs key
   isSpeaking: boolean;       // audio currently playing
   isLoading: boolean;        // fetching audio from backend
-  sound: Audio.Sound | null;
+  player: AudioPlayer | null;
 
   checkTTSAvailability: () => Promise<void>;
   toggleVoice: () => void;
   speak: (text: string, deityId: string) => Promise<void>;
-  stopSpeaking: () => Promise<void>;
+  stopSpeaking: () => void;
 }
 
 export const useVoiceStore = create<VoiceState>((set, get) => ({
@@ -21,7 +22,7 @@ export const useVoiceStore = create<VoiceState>((set, get) => ({
   isTTSAvailable: false,
   isSpeaking: false,
   isLoading: false,
-  sound: null,
+  player: null,
 
   checkTTSAvailability: async () => {
     try {
@@ -34,9 +35,7 @@ export const useVoiceStore = create<VoiceState>((set, get) => ({
 
   toggleVoice: () => {
     const { isVoiceEnabled, stopSpeaking } = get();
-    if (isVoiceEnabled) {
-      stopSpeaking();
-    }
+    if (isVoiceEnabled) stopSpeaking();
     set({ isVoiceEnabled: !isVoiceEnabled });
   },
 
@@ -44,45 +43,41 @@ export const useVoiceStore = create<VoiceState>((set, get) => ({
     const { isVoiceEnabled, isTTSAvailable, stopSpeaking } = get();
     if (!isVoiceEnabled || !isTTSAvailable) return;
 
-    await stopSpeaking();
+    stopSpeaking();
     set({ isLoading: true });
 
     try {
-      // Set up audio session for playback
-      await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
+      await setAudioModeAsync({ playsInSilentMode: true });
 
       const { audioBase64 } = await synthesizeText(text, deityId);
 
-      // Write base64 audio to a temp file — expo-av needs a file URI
+      // Write base64 audio to a temp file — expo-audio needs a file URI
       const tempPath = `${FileSystem.cacheDirectory}tts_response.mp3`;
       await FileSystem.writeAsStringAsync(tempPath, audioBase64, {
         encoding: FileSystem.EncodingType.Base64,
       });
 
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: tempPath },
-        { shouldPlay: true }
-      );
+      const player = createAudioPlayer({ uri: tempPath });
+      set({ player, isLoading: false, isSpeaking: true });
 
-      set({ sound, isSpeaking: true, isLoading: false });
-
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          set({ isSpeaking: false, sound: null });
-          sound.unloadAsync();
+      player.addListener('playbackStatusUpdate', (status) => {
+        if (status.didJustFinish) {
+          player.remove();
+          set({ isSpeaking: false, player: null });
         }
       });
+
+      player.play();
     } catch {
       set({ isLoading: false, isSpeaking: false });
     }
   },
 
-  stopSpeaking: async () => {
-    const { sound } = get();
-    if (sound) {
-      await sound.stopAsync();
-      await sound.unloadAsync();
+  stopSpeaking: () => {
+    const { player } = get();
+    if (player) {
+      player.remove();
     }
-    set({ sound: null, isSpeaking: false, isLoading: false });
+    set({ player: null, isSpeaking: false, isLoading: false });
   },
 }));
