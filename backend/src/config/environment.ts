@@ -14,6 +14,9 @@ const envSchema = z.object({
     .default('http://localhost:8081')
     .transform((val) => val.split(',')),
   MOCK_MODE: z.string().default('').transform((v) => v === 'true' || v === '1'),
+  // ElevenLabs TTS — optional, voice mode is disabled when absent
+  ELEVENLABS_API_KEY: z.string().default(''),
+  ELEVENLABS_VOICE_ID: z.string().default('pNInz6obpgDQGcFmaJgB'), // Adam — deep, resonant
 });
 
 const parsed = envSchema.safeParse(process.env);

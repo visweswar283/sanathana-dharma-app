@@ -20,6 +20,8 @@ export interface DeityMetadata {
   phase: DeityPhase;
   isAvailable: boolean;
   specialties: string[];
+  /** ElevenLabs voice ID for this deity — overrides the global default */
+  voiceId?: string;
 }
 
 export interface DeityContext {

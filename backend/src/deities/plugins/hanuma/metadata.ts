@@ -11,4 +11,6 @@ export const HANUMA_METADATA: DeityMetadata = {
   phase: 1,
   isAvailable: true,
   specialties: ['courage', 'strength', 'devotion', 'motivation', 'obstacle-removal', 'protection'],
+  // Deep, resonant, warm voice — replace with a custom ElevenLabs voice ID once created
+  voiceId: 'pNInz6obpgDQGcFmaJgB',
 };
